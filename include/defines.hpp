@@ -6,8 +6,8 @@ using U64 = std::uint64_t;
 
 inline constexpr std::string_view NAME = "Chess Forever";
 inline constexpr std::string_view VERSION = "0.1.0";
-inline constexpr int BRD_SQ_NUM = 120;
-inline constexpr int MAXGAMEMOVES = 2048;
+inline constexpr std::size_t BRD_SQ_NUM = 120;
+inline constexpr std::size_t MAXGAMEMOVES = 2048;
 
 enum class Piece : int {
   EMPTY,
@@ -115,7 +115,7 @@ struct S_BOARD {
   std::array<int, BRD_SQ_NUM> pieces{};
   std::array<U64, 3> pawns{};
   std::array<int, 2> KingSq{};
-  int side{};
+  Side side{};
   int enPas{};
   int fiftyMove{};
   int ply{};
@@ -128,3 +128,52 @@ struct S_BOARD {
   std::array<int, 3> minPce{};
   std::array<S_UNDO, MAXGAMEMOVES> history{};
 };
+
+// Helper instead of macro
+[[nodiscard]] constexpr int FR2SQ(int f, int r) noexcept {
+  return 21 + f + (r * 10);
+}
+
+namespace detail {
+
+constexpr auto build_sq120_to_sq64() {
+  std::array<int, BRD_SQ_NUM> mapping{};
+  mapping.fill(65);
+
+  std::size_t sq64 = 0;
+  for (int rank = static_cast<int>(Rank::R1);
+       rank <= static_cast<int>(Rank::R8); ++rank) {
+    for (int file = static_cast<int>(File::A);
+         file <= static_cast<int>(File::H); ++file) {
+      const auto sq120 = FR2SQ(file, rank);
+      mapping[static_cast<std::size_t>(sq120)] = static_cast<int>(sq64);
+      ++sq64;
+    }
+  }
+
+  return mapping;
+}
+
+constexpr auto build_sq64_to_sq120() {
+  std::array<int, 64> mapping{};
+  mapping.fill(120);
+
+  std::size_t sq64 = 0;
+  for (int rank = static_cast<int>(Rank::R1);
+       rank <= static_cast<int>(Rank::R8); ++rank) {
+    for (int file = static_cast<int>(File::A);
+         file <= static_cast<int>(File::H); ++file) {
+      mapping[sq64] = FR2SQ(file, rank);
+      ++sq64;
+    }
+  }
+
+  return mapping;
+}
+
+}  // namespace detail
+
+inline constexpr std::array<int, BRD_SQ_NUM> Sq120ToSq64 =
+    detail::build_sq120_to_sq64();
+inline constexpr std::array<int, 64> Sq64ToSq120 =
+    detail::build_sq64_to_sq120();

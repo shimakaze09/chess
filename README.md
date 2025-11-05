@@ -1,11 +1,13 @@
 # chess
+
 chess engine
 
 ## Build Instructions
 
 ### Prerequisites
+
 - CMake 3.10 or higher
-- C++17 compatible compiler (GCC, Clang, MSVC)
+- C++20 compatible compiler (GCC, Clang, MSVC)
 
 ### Building
 
@@ -14,8 +16,8 @@ chess engine
 mkdir build
 cd build
 
-# Configure
-cmake ..
+# Configure (out-of-source recommended)
+cmake -S .. -B .
 
 # Build
 cmake --build .
@@ -25,6 +27,7 @@ cmake --build .
 ```
 
 ### Project Structure
+
 ```
 chess/
 ├── CMakeLists.txt      # Main CMake configuration
