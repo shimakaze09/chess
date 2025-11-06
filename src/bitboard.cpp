@@ -1,46 +1,43 @@
 #include "defines.hpp"
 
-const int BitTable[64] = {63, 30, 3,  32, 25, 41, 22, 33, 15, 50, 42, 13, 11,
-                          53, 19, 34, 61, 29, 2,  51, 21, 43, 45, 10, 18, 47,
-                          1,  54, 9,  57, 0,  35, 62, 31, 40, 4,  49, 5,  52,
-                          26, 60, 6,  23, 44, 46, 27, 56, 16, 7,  39, 48, 24,
-                          59, 14, 12, 55, 38, 28, 58, 20, 37, 17, 36, 8};
+namespace {
 
-int PopBit(U64* bb) {
-  U64 b = *bb ^ (*bb - 1);
-  unsigned int fold = (unsigned)((b & 0xffffffff) ^ (b >> 32));
-  *bb &= (*bb - 1);
-  return BitTable[(fold * 0x783a9b23) >> 26];
-}
+constexpr char kOccupiedSymbol = 'X';
+constexpr char kEmptySymbol = '-';
 
-int CountBits(U64 b) {
-  int r;
-  for (r = 0; b; r++, b &= b - 1);
-  return r;
-}
+}  // namespace
 
-void PrintBitboard(U64 bb) {
-  U64 shiftMe = 1ULL;
-
-  int rank = 0;
-  int file = 0;
-  int sq = 0;
-  int sq64 = 0;
-
-  printf("\n");
-  for (rank = static_cast<int>(Rank::R8); rank >= static_cast<int>(Rank::R1);
-       rank--) {
-    for (file = static_cast<int>(File::A); file <= static_cast<int>(File::H);
-         file++) {
-      sq = FR2SQ(file, rank);
-      sq64 = SQ64(sq);
-      if (bb & (shiftMe << sq64)) {
-        printf("X");
-      } else {
-        printf("-");
-      }
-    }
-    printf("\n");
+int PopBit(U64& bitboard) {
+  if (bitboard == 0ULL) {
+    return -1;
   }
-  printf("\n\n");
+
+  const auto lsbIndex = std::countr_zero(bitboard);
+  bitboard &= bitboard - 1;
+  return static_cast<int>(lsbIndex);
+}
+
+int CountBits(U64 bitboard) {
+  return static_cast<int>(std::popcount(bitboard));
+}
+
+void PrintBitboard(U64 bitboard) {
+  std::cout << '\n';
+
+  for (int rank = static_cast<int>(Rank::R8);
+       rank >= static_cast<int>(Rank::R1); --rank) {
+    for (int file = static_cast<int>(File::A);
+         file <= static_cast<int>(File::H); ++file) {
+      const auto square120 = FR2SQ(file, rank);
+      const auto square64 = Sq120ToSq64Index(square120);
+
+      assert(square64 >= 0 && square64 < 64);
+      const auto index = static_cast<std::size_t>(square64);
+      const bool occupied = IsBitSet(bitboard, index);
+      std::cout << (occupied ? kOccupiedSymbol : kEmptySymbol);
+    }
+    std::cout << '\n';
+  }
+
+  std::cout << '\n';
 }

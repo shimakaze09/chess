@@ -2,22 +2,6 @@
 
 #include "pch.hpp"
 
-#define DEBUG
-
-#ifndef DEBUG
-#define ASSERT(n)
-#else
-#define ASSERT(n)                     \
-  if (!(n)) {                         \
-    printf("%s - Failed", #n);        \
-    printf("On %s ", __DATE__);       \
-    printf("At %s ", __TIME__);       \
-    printf("In File %s ", __FILE__);  \
-    printf("At Line %d\n", __LINE__); \
-    exit(1);                          \
-  }
-#endif
-
 using U64 = std::uint64_t;
 
 inline constexpr std::string_view NAME = "Chess Forever";
@@ -153,12 +137,6 @@ struct S_BOARD {
   return 21 + f + (r * 10);
 }
 
-#define SQ64(sq120) Sq120ToSq64[sq120]
-#define POP(b) PopBit(b)
-#define CNT(b) CountBits(b)
-#define CLRBIT(bb, sq) ((bb) &= ClearMask[(sq)])
-#define SETBIT(bb, sq) ((bb) |= SetMask[(sq)])
-
 namespace detail {
 
 constexpr auto build_sq120_to_sq64() {
@@ -196,18 +174,51 @@ constexpr auto build_sq64_to_sq120() {
   return mapping;
 }
 
+constexpr auto build_set_mask() {
+  std::array<U64, 64> masks{};
+  for (std::size_t index = 0; index < masks.size(); ++index) {
+    masks[index] = U64{1} << index;
+  }
+  return masks;
+}
+
+constexpr auto build_clear_mask() {
+  std::array<U64, 64> masks{};
+  for (std::size_t index = 0; index < masks.size(); ++index) {
+    masks[index] = ~(U64{1} << index);
+  }
+  return masks;
+}
+
 }  // namespace detail
 
 inline constexpr std::array<int, BRD_SQ_NUM> Sq120ToSq64 =
     detail::build_sq120_to_sq64();
 inline constexpr std::array<int, 64> Sq64ToSq120 =
     detail::build_sq64_to_sq120();
+inline constexpr std::array<U64, 64> SetMask = detail::build_set_mask();
+inline constexpr std::array<U64, 64> ClearMask = detail::build_clear_mask();
 
-extern U64 SetMask[64];
-extern U64 ClearMask[64];
+[[nodiscard]] constexpr int Sq120ToSq64Index(int square120) noexcept {
+  return Sq120ToSq64[static_cast<std::size_t>(square120)];
+}
 
-extern void PrintBitboard(U64 bb);
-extern int PopBit(U64* bb);
-extern int CountBits(U64 b);
+[[nodiscard]] constexpr int Sq64ToSq120Index(int square64) noexcept {
+  return Sq64ToSq120[static_cast<std::size_t>(square64)];
+}
 
-extern void AllInit();
+inline constexpr void SetBit(U64& bitboard, std::size_t square) noexcept {
+  bitboard |= SetMask[square];
+}
+
+inline constexpr void ClearBit(U64& bitboard, std::size_t square) noexcept {
+  bitboard &= ClearMask[square];
+}
+
+[[nodiscard]] inline bool IsBitSet(U64 bitboard, std::size_t square) noexcept {
+  return (bitboard & SetMask[square]) != 0ULL;
+}
+
+[[nodiscard]] int PopBit(U64& bitboard);
+[[nodiscard]] int CountBits(U64 bitboard);
+void PrintBitboard(U64 bitboard);

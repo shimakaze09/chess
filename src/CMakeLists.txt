@@ -2,7 +2,6 @@
 set(SOURCES
     main.cpp
     bitboard.cpp
-    init.cpp
 )
 
 # Create executable
@@ -29,6 +28,10 @@ endif()
 # Set include directories for the target (use target-based include)
 target_include_directories(chess PRIVATE
     ${CMAKE_SOURCE_DIR}/include
+)
+
+target_precompile_headers(chess PRIVATE
+    "${CMAKE_SOURCE_DIR}/include/pch.hpp"
 )
 
 # Link libraries if needed
