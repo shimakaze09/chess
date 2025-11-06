@@ -1,6 +1,7 @@
 # Source files
 set(SOURCES
     main.cpp
+    bitboard.cpp
 )
 
 # Create executable

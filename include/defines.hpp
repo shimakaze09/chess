@@ -153,6 +153,8 @@ struct S_BOARD {
   return 21 + f + (r * 10);
 }
 
+#define SQ64(sq120) Sq120ToSq64[sq120]
+
 namespace detail {
 
 constexpr auto build_sq120_to_sq64() {
@@ -196,3 +198,5 @@ inline constexpr std::array<int, BRD_SQ_NUM> Sq120ToSq64 =
     detail::build_sq120_to_sq64();
 inline constexpr std::array<int, 64> Sq64ToSq120 =
     detail::build_sq64_to_sq120();
+
+extern void PrintBitboard(U64 bb);
