@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdlib.h>
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
