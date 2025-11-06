@@ -1,18 +1,19 @@
 #include "defines.hpp"
 
 int main() {
-  U64 playBitboard=0ULL;
+  U64 playBitboard = 0ULL;
 
-  printf("Initial Bitboard:\n");
-  PrintBitboard(playBitboard);
+  playBitboard |= (1ULL << SQ64(static_cast<int>(Square::D2)));
+  playBitboard |= (1ULL << SQ64(static_cast<int>(Square::D3)));
+  playBitboard |= (1ULL << SQ64(static_cast<int>(Square::D4)));
 
-  playBitboard |=(1ULL << SQ64(static_cast<int>(Square::D2)));
-  printf("After adding D2:\n");
-  PrintBitboard(playBitboard);
+  int sq64 = 0;
+  while (playBitboard) {
+    sq64 = POP(&playBitboard);
 
-  playBitboard |=(1ULL << SQ64(static_cast<int>(Square::G2)));
-  printf("After adding G2:\n");
-  PrintBitboard(playBitboard);
+    printf("Popped square: %d\n", sq64);
+    PrintBitboard(playBitboard);
+  }
 
   return 0;
 }

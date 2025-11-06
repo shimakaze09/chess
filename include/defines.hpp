@@ -154,6 +154,8 @@ struct S_BOARD {
 }
 
 #define SQ64(sq120) Sq120ToSq64[sq120]
+#define POP(b) PopBit(b)
+#define CNT(b) CountBits(b)
 
 namespace detail {
 
@@ -200,3 +202,5 @@ inline constexpr std::array<int, 64> Sq64ToSq120 =
     detail::build_sq64_to_sq120();
 
 extern void PrintBitboard(U64 bb);
+extern int PopBit(U64* bb);
+extern int CountBits(U64 b);
