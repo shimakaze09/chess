@@ -156,6 +156,8 @@ struct S_BOARD {
 #define SQ64(sq120) Sq120ToSq64[sq120]
 #define POP(b) PopBit(b)
 #define CNT(b) CountBits(b)
+#define CLRBIT(bb, sq) ((bb) &= ClearMask[(sq)])
+#define SETBIT(bb, sq) ((bb) |= SetMask[(sq)])
 
 namespace detail {
 
@@ -201,6 +203,11 @@ inline constexpr std::array<int, BRD_SQ_NUM> Sq120ToSq64 =
 inline constexpr std::array<int, 64> Sq64ToSq120 =
     detail::build_sq64_to_sq120();
 
+extern U64 SetMask[64];
+extern U64 ClearMask[64];
+
 extern void PrintBitboard(U64 bb);
 extern int PopBit(U64* bb);
 extern int CountBits(U64 b);
+
+extern void AllInit();

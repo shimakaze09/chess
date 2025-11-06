@@ -2,6 +2,7 @@
 set(SOURCES
     main.cpp
     bitboard.cpp
+    init.cpp
 )
 
 # Create executable
