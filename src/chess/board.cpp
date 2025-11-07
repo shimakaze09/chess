@@ -1,12 +1,16 @@
 #include "chess/board.hpp"
+
+#include <cassert>
+#include <cctype>
+#include <format>
+#include <iostream>
+#include <optional>
+
+#include "chess/bitboard.hpp"
 #include "chess/hash.hpp"
 #include "chess/internal/data.hpp"
 #include "chess/internal/init.hpp"
 #include "chess/types.hpp"
-#include "chess/bitboard.hpp"
-#include <cstdio>
-#include <cstring>
-#include <cassert>
 
 namespace chess {
 
@@ -51,86 +55,130 @@ void Board::reset() noexcept {
 bool Board::parseFen(std::string_view fen) noexcept {
     reset();
 
-    int rank = static_cast<int>(Rank::R8);
-    int file = static_cast<int>(File::A);
-    Piece piece = Piece::Empty;
-    int count = 0;
-    size_t i = 0;
-    int sq64 = 0;
-    Square sq120 = Square::NoSquare;
+    constexpr auto kBoardSize = 8;
+    constexpr char kRankSeparator = '/';
+    constexpr char kFieldSeparator = ' ';
 
-    while (rank >= static_cast<int>(Rank::R1) && i < fen.length()) {
-        count = 1;
-        switch (fen[i]) {
-            case 'p': piece = Piece::BlackPawn; break;
-            case 'r': piece = Piece::BlackRook; break;
-            case 'n': piece = Piece::BlackKnight; break;
-            case 'b': piece = Piece::BlackBishop; break;
-            case 'k': piece = Piece::BlackKing; break;
-            case 'q': piece = Piece::BlackQueen; break;
-            case 'P': piece = Piece::WhitePawn; break;
-            case 'R': piece = Piece::WhiteRook; break;
-            case 'N': piece = Piece::WhiteKnight; break;
-            case 'B': piece = Piece::WhiteBishop; break;
-            case 'K': piece = Piece::WhiteKing; break;
-            case 'Q': piece = Piece::WhiteQueen; break;
-            case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8':
-                piece = Piece::Empty;
-                count = fen[i] - '0';
-                break;
-            case '/': case ' ':
-                rank--;
-                file = static_cast<int>(File::A);
-                i++;
-                continue;
+    // Lambda to convert character to piece
+    const auto charToPiece = [](char ch) constexpr -> std::optional<Piece> {
+        switch (ch) {
+            case 'p':
+                return Piece::BlackPawn;
+            case 'r':
+                return Piece::BlackRook;
+            case 'n':
+                return Piece::BlackKnight;
+            case 'b':
+                return Piece::BlackBishop;
+            case 'k':
+                return Piece::BlackKing;
+            case 'q':
+                return Piece::BlackQueen;
+            case 'P':
+                return Piece::WhitePawn;
+            case 'R':
+                return Piece::WhiteRook;
+            case 'N':
+                return Piece::WhiteKnight;
+            case 'B':
+                return Piece::WhiteBishop;
+            case 'K':
+                return Piece::WhiteKing;
+            case 'Q':
+                return Piece::WhiteQueen;
             default:
-                return false;
+                return std::nullopt;
+        }
+    };
+
+    auto current_rank = static_cast<int>(Rank::R8);
+    auto current_file = static_cast<int>(File::A);
+    std::size_t pos = 0;
+
+    // Parse board position
+    while (current_rank >= static_cast<int>(Rank::R1) && pos < fen.length()) {
+        const char current_char = fen[pos];
+
+        if (current_char == kRankSeparator || current_char == kFieldSeparator) {
+            current_rank--;
+            current_file = static_cast<int>(File::A);
+            pos++;
+            if (current_char == kFieldSeparator) break;
+            continue;
         }
 
-        for (int j = 0; j < count; j++) {
-            sq64 = rank * 8 + file;
-            sq120 = squareTo120(sq64);
-            if (piece != Piece::Empty) {
-                pieces_[static_cast<int>(sq120)] = piece;
-            }
-            file++;
+        if (std::isdigit(current_char)) {
+            const int empty_squares = current_char - '0';
+            current_file += empty_squares;
+        } else if (const auto piece_opt = charToPiece(current_char)) {
+            const auto square_64 = (current_rank * kBoardSize) + current_file;
+            const auto square_120 = internal::squareTo120(square_64);
+            pieces_[static_cast<int>(square_120)] = *piece_opt;
+            current_file++;
+        } else {
+            return false; // Invalid character
         }
-        i++;
+
+        pos++;
     }
 
-    if (i >= fen.length() || (fen[i] != 'w' && fen[i] != 'b')) {
+    // Parse side to move
+    if (pos >= fen.length() || (fen[pos] != 'w' && fen[pos] != 'b')) {
         return false;
     }
 
-    side_ = (fen[i] == 'w') ? Color::White : Color::Black;
-    i += 2;
+    side_ = (fen[pos] == 'w') ? Color::White : Color::Black;
+    pos += 2; // Skip side and space
 
-    for (int j = 0; j < 4 && i < fen.length(); j++) {
-        if (fen[i] == ' ') {
+    // Parse castling rights
+    constexpr int kMaxCastleChars = 4;
+    for (int castle_idx = 0; castle_idx < kMaxCastleChars && pos < fen.length(); ++castle_idx) {
+        if (fen[pos] == kFieldSeparator) {
             break;
         }
-        switch (fen[i]) {
-            case 'K': castlePerm_ |= static_cast<int>(CastleRights::WhiteKingside); break;
-            case 'Q': castlePerm_ |= static_cast<int>(CastleRights::WhiteQueenside); break;
-            case 'k': castlePerm_ |= static_cast<int>(CastleRights::BlackKingside); break;
-            case 'q': castlePerm_ |= static_cast<int>(CastleRights::BlackQueenside); break;
-            default: break;
-        }
-        i++;
-    }
-    i++;
 
-    if (i < fen.length() && fen[i] != '-') {
-        if (i + 1 < fen.length()) {
-            file = fen[i] - 'a';
-            rank = fen[i + 1] - '1';
-            if (file >= 0 && file <= 7 && rank >= 0 && rank <= 7) {
-                enPas_ = squareFromFileRank(static_cast<File>(file), static_cast<Rank>(rank));
-            }
-            i += 2;
+        switch (fen[pos]) {
+            case 'K':
+                castlePerm_ |= static_cast<int>(CastleRights::WhiteKingside);
+                break;
+            case 'Q':
+                castlePerm_ |= static_cast<int>(CastleRights::WhiteQueenside);
+                break;
+            case 'k':
+                castlePerm_ |= static_cast<int>(CastleRights::BlackKingside);
+                break;
+            case 'q':
+                castlePerm_ |= static_cast<int>(CastleRights::BlackQueenside);
+                break;
+            case '-':
+                break; // No castling rights
+            default:
+                break;
         }
-    } else if (i < fen.length() && fen[i] == '-') {
-        i++;
+        pos++;
+    }
+
+    if (pos < fen.length() && fen[pos] == kFieldSeparator) {
+        pos++;
+    }
+
+    // Parse en passant square
+    if (pos < fen.length() && fen[pos] != '-') {
+        if (pos + 1 < fen.length()) {
+            const auto file_char = fen[pos] - 'a';
+            const auto rank_char = fen[pos + 1] - '1';
+            constexpr int kMinFileRank = 0;
+            constexpr int kMaxFileRank = 7;
+
+            if (file_char >= kMinFileRank && file_char <= kMaxFileRank &&
+                rank_char >= kMinFileRank && rank_char <= kMaxFileRank) {
+                enPas_ =
+                    squareFromFileRank(static_cast<File>(file_char), static_cast<Rank>(rank_char));
+            }
+            pos += 2;
+        }
+    } else if (pos < fen.length() && fen[pos] == '-') {
+        pos++;
     }
 
     posKey_ = hash::generatePositionKey(*this);
@@ -140,31 +188,40 @@ bool Board::parseFen(std::string_view fen) noexcept {
 }
 
 void Board::print() const noexcept {
-    printf("\nGame Board:\n\n");
+    std::cout << "\nGame Board:\n\n";
 
-    for (int rank = static_cast<int>(Rank::R8); rank >= static_cast<int>(Rank::R1); rank--) {
-        printf("%d  ", rank + 1);
-        for (int file = static_cast<int>(File::A); file <= static_cast<int>(File::H); file++) {
-            Square sq = squareFromFileRank(static_cast<File>(file), static_cast<Rank>(rank));
-            Piece piece = pieces_[static_cast<int>(sq)];
-            printf("%3c", internal::kPieceChar[static_cast<int>(piece)]);
+    for (auto rank_idx = static_cast<int>(Rank::R8); rank_idx >= static_cast<int>(Rank::R1);
+         --rank_idx) {
+        std::cout << std::format("{}  ", rank_idx + 1);
+
+        for (auto file_idx = static_cast<int>(File::A); file_idx <= static_cast<int>(File::H);
+             ++file_idx) {
+            const auto square =
+                squareFromFileRank(static_cast<File>(file_idx), static_cast<Rank>(rank_idx));
+            const auto piece = pieces_[static_cast<int>(square)];
+            std::cout << std::format("{:>3}", internal::kPieceChar[static_cast<int>(piece)]);
         }
-        printf("\n");
+        std::cout << '\n';
     }
 
-    printf("\n   ");
-    for (int file = static_cast<int>(File::A); file <= static_cast<int>(File::H); file++) {
-        printf("%3c", 'a' + file);
+    std::cout << "\n   ";
+    for (auto file_idx = static_cast<int>(File::A); file_idx <= static_cast<int>(File::H);
+         ++file_idx) {
+        std::cout << std::format("{:>3}", static_cast<char>('a' + file_idx));
     }
-    printf("\n");
-    printf("side:%c\n", internal::kSideChar[static_cast<int>(side_)]);
-    printf("enPas:%d\n", static_cast<int>(enPas_));
-    printf("castle:%c%c%c%c\n",
-           (castlePerm_ & static_cast<int>(CastleRights::WhiteKingside)) ? 'K' : '-',
-           (castlePerm_ & static_cast<int>(CastleRights::WhiteQueenside)) ? 'Q' : '-',
-           (castlePerm_ & static_cast<int>(CastleRights::BlackKingside)) ? 'k' : '-',
-           (castlePerm_ & static_cast<int>(CastleRights::BlackQueenside)) ? 'q' : '-');
-    printf("PosKey:%llX\n", posKey_);
+    std::cout << '\n';
+    std::cout << std::format("side:{}\n", internal::kSideChar[static_cast<int>(side_)]);
+    std::cout << std::format("enPas:{}\n", static_cast<int>(enPas_));
+
+    const auto castle_rights = std::format(
+        "castle:{}{}{}{}\n",
+        (castlePerm_ & static_cast<int>(CastleRights::WhiteKingside)) != 0 ? 'K' : '-',
+        (castlePerm_ & static_cast<int>(CastleRights::WhiteQueenside)) != 0 ? 'Q' : '-',
+        (castlePerm_ & static_cast<int>(CastleRights::BlackKingside)) != 0 ? 'k' : '-',
+        (castlePerm_ & static_cast<int>(CastleRights::BlackQueenside)) != 0 ? 'q' : '-');
+    std::cout << castle_rights;
+
+    std::cout << std::format("PosKey:{:X}\n", posKey_);
 }
 
 void Board::updateListsMaterial() noexcept {
@@ -185,7 +242,8 @@ void Board::updateListsMaterial() noexcept {
 
             material_[static_cast<int>(col)] += internal::kPieceVal[static_cast<int>(piece)];
 
-            pList_[static_cast<int>(piece)][pceNum_[static_cast<int>(piece)]] = static_cast<int>(sq);
+            pList_[static_cast<int>(piece)][pceNum_[static_cast<int>(piece)]] =
+                static_cast<int>(sq);
             pceNum_[static_cast<int>(piece)]++;
 
             if (piece == Piece::WhiteKing) {
@@ -212,25 +270,23 @@ bool Board::checkBoard() const noexcept {
     return true;
 }
 
-void Board::mirror() noexcept {
-}
+void Board::mirror() noexcept {}
 
 bool Board::isSquareAttacked(Square sq, Color side) const noexcept {
+    static_cast<void>(sq);
+    static_cast<void>(side);
     return false;
 }
 
 bool Board::makeMove(Move move) noexcept {
+    static_cast<void>(move);
     return false;
 }
 
-void Board::takeMove() noexcept {
-}
+void Board::takeMove() noexcept {}
 
-void Board::makeNullMove() noexcept {
-}
+void Board::makeNullMove() noexcept {}
 
-void Board::takeNullMove() noexcept {
-}
+void Board::takeNullMove() noexcept {}
 
 } // namespace chess
-

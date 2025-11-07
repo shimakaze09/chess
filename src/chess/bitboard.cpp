@@ -1,38 +1,48 @@
 #include "chess/bitboard.hpp"
+
+#include <bit>
+#include <format>
+#include <iostream>
+
 #include "chess/internal/data.hpp"
 #include "chess/internal/init.hpp"
 #include "chess/types.hpp"
-#include <cstdio>
 
 namespace chess::bitboard {
 
-int popBit(Bitboard& bb) noexcept {
-    Bitboard b = bb ^ (bb - 1);
-    unsigned int fold = static_cast<unsigned>((b & 0xffffffff) ^ (b >> 32));
-    bb &= (bb - 1);
-    return kBitTable[(fold * 0x783a9b23) >> 26];
-}
-
-int countBits(Bitboard b) noexcept {
-    int r = 0;
-    for (; b; r++, b &= b - 1);
-    return r;
-}
-
-void print(Bitboard bb) noexcept {
-    printf("\n");
-    for (int rank = static_cast<int>(Rank::R8); rank >= static_cast<int>(Rank::R1); --rank) {
-        for (int file = static_cast<int>(File::A); file <= static_cast<int>(File::H); ++file) {
-            Square sq = squareFromFileRank(static_cast<File>(file), static_cast<Rank>(rank));
-            int sq64 = internal::g_sq120ToSq64[static_cast<int>(sq)];
-            if ((1ULL << sq64) & bb)
-                printf("X");
-            else
-                printf("-");
-        }
-        printf("\n");
+int popBit(Bitboard& bitboard) noexcept {
+    // Use C++20 bit manipulation functions for better performance
+    if (bitboard == 0) {
+        return -1;
     }
-    printf("\n\n");
+
+    const int index = std::countr_zero(bitboard);
+    bitboard &= (bitboard - 1); // Clear the lowest set bit
+    return index;
+}
+
+int countBits(Bitboard bitboard) noexcept {
+    // Use C++20 popcount for hardware-accelerated bit counting
+    return std::popcount(bitboard);
+}
+
+void print(Bitboard bitboard) noexcept {
+    std::cout << '\n';
+
+    for (auto rank_idx = static_cast<int>(Rank::R8); rank_idx >= static_cast<int>(Rank::R1);
+         --rank_idx) {
+        for (auto file_idx = static_cast<int>(File::A); file_idx <= static_cast<int>(File::H);
+             ++file_idx) {
+            const auto square =
+                squareFromFileRank(static_cast<File>(file_idx), static_cast<Rank>(rank_idx));
+            const auto square_64 = internal::g_sq120ToSq64[static_cast<int>(square)];
+
+            const char symbol = ((1ULL << square_64) & bitboard) ? 'X' : '-';
+            std::cout << symbol;
+        }
+        std::cout << '\n';
+    }
+    std::cout << "\n\n" << std::flush;
 }
 
 } // namespace chess::bitboard

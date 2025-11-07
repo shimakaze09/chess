@@ -1,10 +1,18 @@
 #include "chess/misc.hpp"
-#include "chess/search_info.hpp"
+
+#include <cctype>
+#include <chrono>
 #include <cstdio>
-#include <cstring>
+#include <iostream>
+#include <string>
+#include <string_view>
+
+#include "chess/search_info.hpp"
 
 #ifdef _WIN32
+#include <conio.h>
 #include <windows.h>
+
 #else
 #include <sys/select.h>
 #include <sys/time.h>
@@ -14,74 +22,55 @@
 namespace chess::misc {
 
 int getTimeMs() noexcept {
-#ifdef _WIN32
-    return static_cast<int>(GetTickCount());
-#else
-    struct timeval t;
-    gettimeofday(&t, nullptr);
-    return static_cast<int>(t.tv_sec * 1000 + t.tv_usec / 1000);
-#endif
+    const auto now = std::chrono::steady_clock::now();
+    const auto epoch = now.time_since_epoch();
+    const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
+    return static_cast<int>(milliseconds.count());
 }
 
-int inputWaiting() noexcept {
-#ifndef _WIN32
+namespace {
+[[maybe_unused]] constexpr int kMaxSelectTimeout = 16;
+constexpr std::string_view kQuitCommand = "quit";
+} // namespace
+
+int InputWaiting() noexcept {
+#ifdef _WIN32
+    return _kbhit();
+#else
     fd_set readfds;
     struct timeval tv;
     FD_ZERO(&readfds);
     FD_SET(fileno(stdin), &readfds);
     tv.tv_sec = 0;
     tv.tv_usec = 0;
-    select(16, &readfds, nullptr, nullptr, &tv);
-    return (FD_ISSET(fileno(stdin), &readfds));
-#else
-    static int init = 0;
-    static HANDLE inh;
-    DWORD dw;
-
-    if (!init) {
-        init = 1;
-        inh = GetStdHandle(STD_INPUT_HANDLE);
-        DWORD mode;
-        if (!GetConsoleMode(inh, &mode)) {
-            DWORD available;
-            if (PeekNamedPipe(inh, nullptr, 0, nullptr, &available, nullptr)) {
-                return available;
-            }
-            return 1;
-        }
-        SetConsoleMode(inh, mode & ~(ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT));
-        FlushConsoleInputBuffer(inh);
-    }
-    DWORD available;
-    if (PeekNamedPipe(inh, nullptr, 0, nullptr, &available, nullptr)) {
-        return available;
-    }
-    GetNumberOfConsoleInputEvents(inh, &dw);
-    return dw <= 1 ? 0 : static_cast<int>(dw);
+    const int result = select(kMaxSelectTimeout, &readfds, nullptr, nullptr, &tv);
+    return result > 0 && FD_ISSET(fileno(stdin), &readfds) ? 1 : 0;
 #endif
 }
 
 void readInput(SearchInfo& info) noexcept {
-    if (inputWaiting()) {
-        info.setStopped(true);
-        char input[256] = "";
-#ifdef _WIN32
-        DWORD bytesRead;
-        ReadFile(GetStdHandle(STD_INPUT_HANDLE), input, 256, &bytesRead, nullptr);
-#else
-        ssize_t bytes = read(fileno(stdin), input, 256);
-        (void)bytes;
-#endif
-        char* endc = strchr(input, '\n');
-        if (endc) *endc = 0;
+    if (!InputWaiting()) {
+        return;
+    }
 
-        if (strlen(input) > 0) {
-            if (strncmp(input, "quit", 4) == 0) {
+    info.setStopped(true);
+
+    try {
+        std::string input;
+        if (std::getline(std::cin, input)) {
+            // Remove trailing whitespace
+            while (!input.empty() && std::isspace(input.back())) {
+                input.pop_back();
+            }
+
+            if (!input.empty() && input.starts_with(kQuitCommand)) {
                 info.setQuit(true);
             }
         }
+    } catch (...) {
+        // Ignore input errors in search context
+        info.setStopped(true);
     }
 }
 
 } // namespace chess::misc
-

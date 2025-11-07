@@ -31,7 +31,3 @@ endif()
 target_include_directories(chess PRIVATE
     ${CMAKE_SOURCE_DIR}/include
 )
-
-target_precompile_headers(chess PRIVATE
-    "${CMAKE_SOURCE_DIR}/include/pch.hpp"
-)

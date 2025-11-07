@@ -20,4 +20,3 @@ void loop(Board& board, SearchInfo& info) noexcept;
 } // namespace console
 
 } // namespace chess
-

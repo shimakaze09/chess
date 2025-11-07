@@ -1,33 +1,34 @@
 #include "chess/internal/init.hpp"
-#include "chess/internal/data.hpp"
-#include "chess/types.hpp"
-#include <cstdio>
+
 #include <array>
+
+#include "chess/internal/data.hpp"
 #include "chess/movegen.hpp"
 #include "chess/polybook.hpp"
+#include "chess/types.hpp"
 
 namespace chess::internal {
 
 namespace {
-    constexpr std::uint64_t generateRandom64(std::uint64_t seed) noexcept {
-        seed ^= seed << 13;
-        seed ^= seed >> 7;
-        seed ^= seed << 17;
-        return seed;
-    }
-
-    constexpr std::array<std::uint64_t, 13 * 120 + 1 + 16> generateHashKeys() noexcept {
-        std::array<std::uint64_t, 13 * 120 + 1 + 16> keys{};
-        std::uint64_t seed = 0x123456789ABCDEF0ULL;
-        for (std::size_t i = 0; i < keys.size(); ++i) {
-            seed = generateRandom64(seed);
-            keys[i] = seed;
-        }
-        return keys;
-    }
-
-    inline constexpr auto kHashKeys = generateHashKeys();
+constexpr std::uint64_t generateRandom64(std::uint64_t seed) noexcept {
+    seed ^= seed << 13;
+    seed ^= seed >> 7;
+    seed ^= seed << 17;
+    return seed;
 }
+
+constexpr std::array<std::uint64_t, 13 * 120 + 1 + 16> generateHashKeys() noexcept {
+    std::array<std::uint64_t, 13 * 120 + 1 + 16> keys{};
+    std::uint64_t seed = 0x123456789ABCDEF0ULL;
+    for (std::size_t i = 0; i < keys.size(); ++i) {
+        seed = generateRandom64(seed);
+        keys[i] = seed;
+    }
+    return keys;
+}
+
+inline constexpr auto kHashKeys = generateHashKeys();
+} // namespace
 
 void initHashKeys() noexcept {
     std::size_t idx = 0;
