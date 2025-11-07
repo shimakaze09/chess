@@ -1,0 +1,30 @@
+Checks: >
+  -*,
+  readability-identifier-naming,
+  readability-braces-around-statements,
+  modernize-use-nullptr,
+  modernize-use-auto,
+  cppcoreguidelines-*,
+  bugprone-*,
+  performance-*,
+  readability-*,
+  google-readability-*,
+  google-runtime-*,
+  google-build-*,
+  google-explicit-constructor
+
+CheckOptions:
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.FunctionCase
+    value: CamelCase
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.MemberSuffix
+    value: _
+  - key: readability-identifier-naming.ConstantPrefix
+    value: k
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE

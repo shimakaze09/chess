@@ -1,24 +1,53 @@
-#include "defines.hpp"
+#include "chess/board.hpp"
+#include "chess/search_info.hpp"
+#include "chess/internal/init.hpp"
+#include "chess/uci.hpp"
+#include "chess/xboard.hpp"
+#include <cstdio>
+#include <cstring>
 
-int main() {
-  U64 primaryBoard = 0ULL;
-  SetBit(primaryBoard, 61);
-  SetBit(primaryBoard, 12);
+int main(int argc, char* argv[]) {
+    chess::internal::initializeAll();
 
-  std::cout << "Initial board state:";
-  PrintBitboard(primaryBoard);
+    chess::Board board;
+    chess::SearchInfo info;
+    info.setQuit(false);
+    board.hashTable().init(64);
+    setbuf(stdin, nullptr);
+    setbuf(stdout, nullptr);
 
-  std::cout << "Active squares: " << CountBits(primaryBoard) << "\n";
+    for (int argNum = 0; argNum < argc; ++argNum) {
+        if (strncmp(argv[argNum], "NoBook", 6) == 0) {
+            chess::g_engineOptions.setUseBook(false);
+            printf("Book Off\n");
+        }
+    }
 
-  auto workingBoard = primaryBoard;
-  const auto poppedIndex = PopBit(workingBoard);
-  std::cout << "After popping least-significant bit (index " << poppedIndex
-            << "):";
-  PrintBitboard(workingBoard);
+    printf("Welcome!\n");
 
-  ClearBit(primaryBoard, 61);
-  std::cout << "After clearing square 61:";
-  PrintBitboard(primaryBoard);
+    char line[256];
+    while (true) {
+        memset(&line[0], 0, sizeof(line));
+        fflush(stdout);
+        if (!fgets(line, 256, stdin)) continue;
+        if (line[0] == '\n') continue;
+        
+        if (strncmp(line, "uci", 3) == 0) {
+            chess::uci::loop(board, info);
+            if (info.quit()) break;
+            continue;
+        } else if (strncmp(line, "xboard", 6) == 0) {
+            chess::xboard::loop(board, info);
+            if (info.quit()) break;
+            continue;
+        } else if (strncmp(line, "vice", 4) == 0) {
+            chess::console::loop(board, info);
+            if (info.quit()) break;
+            continue;
+        } else if (strncmp(line, "quit", 4) == 0) {
+            break;
+        }
+    }
 
-  return 0;
+    return 0;
 }
