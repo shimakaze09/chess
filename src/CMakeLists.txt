@@ -1,6 +1,16 @@
 set(SOURCES
     main.cpp
-    bitboard.cpp
+    chess/bitboard.cpp
+    chess/board.cpp
+    chess/hash.cpp
+    chess/internal/data.cpp
+    chess/internal/init.cpp
+    chess/misc.cpp
+    chess/movegen.cpp
+    chess/polybook.cpp
+    chess/search.cpp
+    chess/uci.cpp
+    chess/xboard.cpp
 )
 
 add_executable(chess ${SOURCES})
@@ -25,6 +35,3 @@ target_include_directories(chess PRIVATE
 target_precompile_headers(chess PRIVATE
     "${CMAKE_SOURCE_DIR}/include/pch.hpp"
 )
-
-# Link libraries if needed
-# target_link_libraries(chess PRIVATE ...)
