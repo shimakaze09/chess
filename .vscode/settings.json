@@ -1,0 +1,8 @@
+{
+    "editor.formatOnSave": true,
+    "C_Cpp.clang_format_style": "file",
+    "clang-tidy.checks": "clang-tidy",
+    "clang-tidy.useBuildPath": true,
+    "clang-tidy.path": "clang-tidy",
+    "C_Cpp.codeAnalysis.clangTidy.enabled": true
+}
